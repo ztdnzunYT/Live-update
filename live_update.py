@@ -33,12 +33,18 @@ def run_script():
 for path in Path('C:/').rglob(""):  # Use '/' on Linux/macOS or 'C:/' on Windows
     print(path)
 
-
 os.system(f"py C:/Users/ztdnz/Documents/Capstone-Project-2024/xzplore/xzplore.py")
 
 """
+def kill():
+    file_name = dpg.get_value(file)
+    for path in Path("C:/").rglob(file_name):
+        full_path = path 
 
+    
 
+    #os.system(f"taskkill /PID {full_path} /F ")
+    
 
 
 
@@ -47,7 +53,7 @@ with dpg.window(label="main_window",tag="main_window"):
     dpg.add_separator()
     dpg.add_spacer(height=5)
     with dpg.group(horizontal=True):
-        file = dpg.add_input_text(width=200,hint="Insert file name")
+        file = dpg.add_input_text(width=200,hint="Insert file name",default_value="Photon_precesion.py")
         with dpg.tooltip(file): 
             with dpg.group():
                 dpg.add_text("Ex: 'Filename.py'")
@@ -62,23 +68,60 @@ with dpg.window(label="main_window",tag="main_window"):
     dpg.add_separator()
     dpg.add_text("1. Insert your file name into the textbox above.",wrap=270)
     dpg.add_text("2. File will only be executed if accompanied by .py || Ex: Filename.py",wrap=270)
-    dpg.add_text("3. If file unable to be executed check for spelling errors or specify the full path of file",wrap=270)
+    dpg.add_text("3. If file unable to be executed check for spelling errors or specify the full path of file",wrap=270) 
+    dpg.add_button(label="Kill Program",callback=kill)
 
 dpg.set_primary_window("main_window",True)
 dpg.show_viewport()
 
+runtime = 0 
 # below replaces, start_dearpygui()
 while dpg.is_dearpygui_running():
+
+    runtime +=1 
+
 
     def on_key_pressed(event):
         return event.name
     
     keyboard.on_press(on_key_pressed)
 
+
+    print(runtime)
+    if runtime > 100:
+        print("killing task")
+
+        os.system('tasklist | findstr python.exe > output.txt')
+
+
+        with open('output.txt', 'r') as file:
+            result = file.read().split()
+
+        print(result)
     
+        #print(os.getpid())
    
 
 
+
+        
+        
+    
+        
+        
+
+
+        #os.system(f"taskkill /PID Python.exe")
+        
+        runtime = 0
+    
+    #os.system("tasklist | findstr python")
+       
+    
+        
+   
+
+ 
 
 
     # Register a global key press event listener
