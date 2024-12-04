@@ -4,49 +4,83 @@ from screeninfo import get_monitors
 import os 
 from pathlib import Path
 import re
+import time
 
 monitor = get_monitors()[0]
 screen_width = monitor.width
+start_time = time.time()
 
 dpg.create_context()
-dpg.create_viewport(title="Live Update",width=315,height=550,x_pos=screen_width-300,y_pos=10,always_on_top=True,resizable=False)
+dpg.create_viewport(title="Live Update",width=315,height=550,x_pos=screen_width-300,y_pos=10,always_on_top=True,resizable=True)
 dpg.setup_dearpygui()
 
 
 def tab_window_display(sender,app_data,user_data):
     windows = [debug_console_window,window_manager_window,meta_data_window]
     for window in windows:
-        if user_data == window:
-            dpg.show_item(window)
-        else:
-            dpg.hide_item(window)
-        
+        dpg.hide_item(window)
+
+    dpg.show_item(user_data)
+
+def reset():
+    global status
+    status = "Inactive"
+    dpg.set_value(debug_console,value="Unable to find .py file...")
+    dpg.set_value(insert_file_text,value="")
+    dpg.set_value(display_py_file,value="")
+    dpg.set_value(insert_file_text,value="")
+    dpg.set_value(display_path,value="")
+    dpg.show_item(inactive_status)
+    dpg.hide_item(active_status)
+    dpg.set_value(file_runtime,value="")
+    dpg.hide_item(active_loading_indicator)
+    dpg.hide_item(search_loading_indicator)
+    dpg.configure_item(insert_file_text,enabled=True)
+
 
 def run_script():
-    print("inserted")
-
-    file_name = dpg.get_value(insert_file)
-
-
-    for path in Path('C:/').rglob(file_name):  # Use '/' on Linux/macOS or 'C:/' on Windows
-            #print(path)
-            full_path = path.resolve()
-    
-    print(full_path)
-
+    global start_time
     try:
         
+        dpg.show_item(search_loading_indicator)
+        dpg.configure_item(insert_file_text,enabled=False)
+        dpg.set_value(debug_console,value="")
+
+        file_name = dpg.get_value(insert_file_text)
+
+        for path in Path('C:/').rglob(file_name):  # Use '/' on Linux/macOS or 'C:/' on Windows
+            
+            split_path = str(path)
+            full_path = path.resolve()
         
-        try:
-            os.system(f"py {full_path}")
-        except:
+        py_path = split_path.split("\\")
+        subfolder_num = len(py_path)-1
+        #print(py_path[subfolder_num][-3:])
+
+        if py_path[subfolder_num][-3:] == ".py":
+
             try:
-                os.system(f"python3 {full_path}")
+                dpg.set_value(debug_console,value=f"Running file on path: \n{full_path}")
+                dpg.set_value(display_py_file,value=dpg.get_value(insert_file_text))
+                dpg.set_value(display_path,value=full_path)
+                dpg.show_item(active_status)
+                dpg.hide_item(inactive_status)
+                start_time = time.time()
+                dpg.hide_item(search_loading_indicator)
+                dpg.show_item(active_loading_indicator)
+                global status
+                status = "Active"
+                os.system(f"py {full_path}")
             except:
-                print("Unable to find file...")
+                try:
+                    os.system(f"python3 {full_path}")
+                except:
+                    reset()
+        else:
+            reset()
     except:
-        print("Unable to find file...")
-        
+        reset()
+
 """
 for path in Path('C:/').rglob(""):  # Use '/' on Linux/macOS or 'C:/' on Windows
     print(path)
@@ -55,28 +89,52 @@ os.system(f"py C:/Users/ztdnz/Documents/Capstone-Project-2024/xzplore/xzplore.py
 
 """
 def kill():
-    file_name = dpg.get_value(insert_file)
+    reset()
+    print("test button")
+    file_name = dpg.get_value(insert_file_text)
+    '''
     for path in Path("C:/").rglob(file_name):
-        full_path = path 
+        full_path = path '''
 
     #os.system(f"taskkill /PID {full_path} /F ")
     
 with dpg.window(label="main_window",tag="main_window"):
-    status = dpg.add_text(f"Status: Inactive")
+    with dpg.group(horizontal=True):
+        dpg.add_text("Status:")
+        status = None
+        inactive_status = dpg.add_text(f"Inactive",color=(240,230,14))
+        active_status = dpg.add_text(f"Active  ",color=(0,255,0),show=False)
+        dpg.add_spacer(width=50) 
+        dpg.add_text("Auto Run")
+        auto_run = dpg.add_checkbox(default_value=True)
+        with dpg.tooltip(auto_run):
+            dpg.add_text("Disables live update \nauto run when unchecked")
+        active_loading_indicator = dpg.add_loading_indicator(style=1,radius=1,color=(0, 255, 0),show=False)
+        search_loading_indicator = dpg.add_loading_indicator(style=1,radius=1,color=(0, 150, 200),show=False)
+        
+        
     dpg.add_separator()
     dpg.add_spacer(height=5)
     with dpg.group(horizontal=True):
-        insert_file = dpg.add_input_text(width=200,hint="Insert file name",default_value="Photon_precesion.py")
-        with dpg.tooltip(insert_file): 
+        insert_file_text = dpg.add_input_text(width=200,hint="Insert file name",default_value="",tag="insert_file_text")
+
+        with dpg.tooltip(insert_file_text): 
             with dpg.group():
                 dpg.add_text("Ex: 'Filename.py'")
                 dpg.add_text("Ex: 'Users/Documents/Filename.py'")
         dpg.add_button(label="Insert",callback=run_script)
     dpg.add_spacer(height=2)
-    dpg.add_text("File Name:")
-    dpg.add_text("Path:")    
-    with dpg.group():
-        dpg.add_text(f"Runtime: {None}")
+    with dpg.group(horizontal=True):
+        dpg.add_text("File Name:")
+        display_py_file = dpg.add_text()
+    with dpg.group(horizontal=True):
+        dpg.add_text("Path:")  
+        display_path = dpg.add_text(wrap=230)
+
+    with dpg.group(horizontal=True):
+        dpg.add_text("Runtime:")
+        file_runtime = dpg.add_text()
+
     dpg.add_button(label="Kill Program",callback=kill)
     dpg.add_spacer(height=5)
     dpg.add_separator()
@@ -91,34 +149,60 @@ with dpg.window(label="main_window",tag="main_window"):
 
     with dpg.child_window(height=85,show=True,tag="debug_console_window") as debug_console_window:
         dpg.add_text("Debug Console")
-        dpg.add_input_text(height=45,width=265,multiline=True,enabled=False)
+        debug_console = dpg.add_input_text(height=45,width=265,multiline=True,enabled=False)
     
     with dpg.child_window(height=175,show=False,tag="window_manager_window") as window_manager_window:
+        dpg.add_text("Current Console")
         pass
+
     
     with dpg.child_window(height=85,show=False,tag="metadata_window") as meta_data_window:
         dpg.add_text("metadata")
         
-
 dpg.set_primary_window("main_window",True)
 dpg.show_viewport()
 
-runtime = 0 
-# below replaces, start_dearpygui()
+loop_time = 0
+click_start_time = time.time()
+click_wait_time = 0 
+file_inserted = False
+
+
 while dpg.is_dearpygui_running():
 
-    runtime += 1 
+    runtime = round(time.time() - start_time)
+    click_wait_time = round(time.time() - click_start_time)
 
     def on_key_pressed(event):
-        return event.name
-    
+        global click_wait_time, click_start_time
+        click_wait_time = 0
+        click_start_time = time.time()
+        
     keyboard.on_press(on_key_pressed)
 
+    if status == "Active":
+        dpg.set_value(file_runtime,f"{runtime} seconds")
+        if click_wait_time > 3:
+            print("Refresh",click_wait_time)
+            click_start_time = time.time()
+
+
+
+
+
+
+
+
+
+
+    """
+    loop_time +=1
+
+
     #print(runtime)
-    if runtime > 100:
-        print(" ")
+    if loop_time > 100:
+        #print(" ")
         #print("killing task")
-        
         os.system('tasklist | findstr python.exe > output.txt')
 
         with open('output.txt', 'r') as read_file:
@@ -126,9 +210,7 @@ while dpg.is_dearpygui_running():
             section = re.split("K", result)
 
         #print(result)
-        
-  
-        print(section)
+        #print(section)
 
         for i in range(len(section)-1):
 
@@ -136,26 +218,14 @@ while dpg.is_dearpygui_running():
                 dpg.add_text(f"{section[i]}",parent="window_manager_window")
                 dpg.add_button(label="Terminate file",callback=lambda:print("program closed"),parent="window_manager_window")
   
-
-       # print(os.getpid())
-   
+        #print(os.getpid())
         #os.system(f"taskkill /PID Python.exe")
         
-        runtime = 0
-    
-    #os.system("tasklist | findstr python")
-       
-    
-        
-   
+        loop_time = 0"""
 
+    
+   # os.system("tasklist | findstr python")
  
-
-
-    # Register a global key press event listener
-
-    # insert here any code you would like to run in the render loop
-    # you can manually stop by using stop_dearpygui()
     
     dpg.render_dearpygui_frame()
 
