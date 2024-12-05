@@ -1,8 +1,7 @@
-import re 
 
 
-path = 'C:/Users/ztdnz/Documents/Capstone-Project-2024/Photon_precesion/Photon_precesion.py'
+numbers = "123","12343","1243","321"
 
-mew_path = re.split("/",path)
+pids_lis = [num for num in numbers if int(num) > 400]
 
-print(mew_path)
+print(pids_lis)

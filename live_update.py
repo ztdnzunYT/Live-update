@@ -9,42 +9,40 @@ import time
 monitor = get_monitors()[0]
 screen_width = monitor.width
 start_time = time.time()
+live_update_pid = os.getpid()
+pid_number_list = []
+current_pid_number_list = [] 
+print(live_update_pid)
 
 dpg.create_context()
 dpg.create_viewport(title="Live Update",width=315,height=550,x_pos=screen_width-300,y_pos=10,always_on_top=True,resizable=True)
 dpg.setup_dearpygui()
 
 
-def tab_window_display(sender,app_data,user_data):
-    windows = [debug_console_window,window_manager_window,meta_data_window]
-    for window in windows:
-        dpg.hide_item(window)
-
-    dpg.show_item(user_data)
-
-def reset():
-    global status
-    status = "Inactive"
-    dpg.set_value(debug_console,value="Unable to find .py file...")
-    dpg.set_value(insert_file_text,value="")
-    dpg.set_value(display_py_file,value="")
-    dpg.set_value(insert_file_text,value="")
-    dpg.set_value(display_path,value="")
-    dpg.show_item(inactive_status)
-    dpg.hide_item(active_status)
-    dpg.set_value(file_runtime,value="")
-    dpg.hide_item(active_loading_indicator)
-    dpg.hide_item(search_loading_indicator)
-    dpg.configure_item(insert_file_text,enabled=True)
-
 
 def run_script():
-    global start_time
+    global start_time, pid_number_list
     try:
         
         dpg.show_item(search_loading_indicator)
         dpg.configure_item(insert_file_text,enabled=False)
         dpg.set_value(debug_console,value="")
+    
+
+        for pid_info in get_pids():
+            split_pid = pid_info.split()
+            if len(split_pid) > 0 :
+                pid_number_list.append(split_pid[1])
+        
+
+
+        '''
+        for pid_info in pid_list:
+            split_pid = pid_info.split()
+            if len(split_pid) > 0 :
+                print(split_pid)
+        '''
+
 
         file_name = dpg.get_value(insert_file_text)
 
@@ -88,6 +86,7 @@ for path in Path('C:/').rglob(""):  # Use '/' on Linux/macOS or 'C:/' on Windows
 os.system(f"py C:/Users/ztdnz/Documents/Capstone-Project-2024/xzplore/xzplore.py")
 
 """
+
 def kill():
     reset()
     print("test button")
@@ -97,7 +96,46 @@ def kill():
         full_path = path '''
 
     #os.system(f"taskkill /PID {full_path} /F ")
+
+
+def reset():
+    global status
+    status = "Inactive"
+    dpg.set_value(debug_console,value="Unable to find .py file...")
+    dpg.set_value(insert_file_text,value="")
+    dpg.set_value(display_py_file,value="")
+    dpg.set_value(insert_file_text,value="")
+    dpg.set_value(display_path,value="")
+    dpg.show_item(inactive_status)
+    dpg.hide_item(active_status)
+    dpg.set_value(file_runtime,value="")
+    dpg.hide_item(active_loading_indicator)
+    dpg.hide_item(search_loading_indicator)
+    dpg.configure_item(insert_file_text,enabled=True)
+
+def on_key_pressed(event):
+    global click_wait_time, click_start_time
+    click_wait_time = 0
+    click_start_time = time.time()    
+
+def get_pids():
+    os.system('tasklist | findstr python.exe > output.txt')
+
+    with open('output.txt', 'r') as read_file:
+        result = read_file.read()
+        section = re.split("K", result)
     
+    return section
+
+def tab_window_display(sender,app_data,user_data):
+    windows = [debug_console_window,window_manager_window,meta_data_window]
+    for window in windows:
+        dpg.hide_item(window)
+
+    dpg.show_item(user_data)
+
+
+        
 with dpg.window(label="main_window",tag="main_window"):
     with dpg.group(horizontal=True):
         dpg.add_text("Status:")
@@ -168,60 +206,60 @@ click_wait_time = 0
 file_inserted = False
 
 
+
+
+
+
+
 while dpg.is_dearpygui_running():
 
     runtime = round(time.time() - start_time)
     click_wait_time = round(time.time() - click_start_time)
 
-    def on_key_pressed(event):
-        global click_wait_time, click_start_time
-        click_wait_time = 0
-        click_start_time = time.time()
+   
         
     keyboard.on_press(on_key_pressed)
 
     if status == "Active":
         dpg.set_value(file_runtime,f"{runtime} seconds")
         if click_wait_time > 3:
-            print("Refresh",click_wait_time)
+            #print("Refresh",click_wait_time)
             click_start_time = time.time()
 
 
 
+        loop_time +=1
+
+        #print(runtime)
+        if loop_time > 100:
 
 
 
-
-
-
-
-    """
-    loop_time +=1
-
-
-    #print(runtime)
-    if loop_time > 100:
-        #print(" ")
-        #print("killing task")
-        os.system('tasklist | findstr python.exe > output.txt')
-
-        with open('output.txt', 'r') as read_file:
-            result = read_file.read()
-            section = re.split("K", result)
-
-        #print(result)
-        #print(section)
-
-        for i in range(len(section)-1):
-
-            with dpg.group(horizontal=True,parent="window_manager_window"):
-                dpg.add_text(f"{section[i]}",parent="window_manager_window")
-                dpg.add_button(label="Terminate file",callback=lambda:print("program closed"),parent="window_manager_window")
-  
-        #print(os.getpid())
-        #os.system(f"taskkill /PID Python.exe")
+            for pid_info in get_pids():
+                split_pid = pid_info.split()
+                if len(split_pid) > 0 :
+                    current_pid_number_list.append(split_pid[1])
         
-        loop_time = 0"""
+            
+            print(pid_number_list)
+            print()
+            print(current_pid_number_list)
+
+            pid_list = get_pids()
+
+            for i in range(len(pid_list)-1):
+
+                with dpg.group(horizontal=True,parent="window_manager_window"):
+                    dpg.add_text(f"{pid_list[i]}",parent="window_manager_window")
+                    dpg.add_button(label="Terminate file",callback=lambda:print("program closed"),parent="window_manager_window")
+    
+            #print(os.getpid())
+            #os.system(f"taskkill /PID Python.exe")
+
+
+            
+            loop_time = 0
+        current_pid_number_list.clear()
 
     
    # os.system("tasklist | findstr python")
