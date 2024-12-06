@@ -5,47 +5,43 @@ import os
 from pathlib import Path
 import re
 import time
+from multiprocessing import Process
 
 monitor = get_monitors()[0]
 screen_width = monitor.width
 start_time = time.time()
 live_update_pid = os.getpid()
-pid_number_list = []
-current_pid_number_list = [] 
-print(live_update_pid)
+running_pid_numbers_list = []
+current_running_pid_numbers_list = [] 
+
 
 dpg.create_context()
 dpg.create_viewport(title="Live Update",width=315,height=550,x_pos=screen_width-300,y_pos=10,always_on_top=True,resizable=True)
 dpg.setup_dearpygui()
 
-
-
 def run_script():
-    global start_time, pid_number_list
+    print("running script")
+    global start_time, running_pid_numbers_list, num_pids, file_name, full_path
+
+    running_pid_numbers_list.clear()
+
     try:
         
         dpg.show_item(search_loading_indicator)
         dpg.configure_item(insert_file_text,enabled=False)
         dpg.set_value(debug_console,value="")
     
-
+    
         for pid_info in get_pids():
             split_pid = pid_info.split()
             if len(split_pid) > 0 :
-                pid_number_list.append(split_pid[1])
+                running_pid_numbers_list.append(split_pid[1])
+
+
+        num_pids = len(running_pid_numbers_list)
         
-
-
-        '''
-        for pid_info in pid_list:
-            split_pid = pid_info.split()
-            if len(split_pid) > 0 :
-                print(split_pid)
-        '''
-
-
         file_name = dpg.get_value(insert_file_text)
-
+ 
         for path in Path('C:/').rglob(file_name):  # Use '/' on Linux/macOS or 'C:/' on Windows
             
             split_path = str(path)
@@ -53,7 +49,9 @@ def run_script():
         
         py_path = split_path.split("\\")
         subfolder_num = len(py_path)-1
-        #print(py_path[subfolder_num][-3:])
+
+        print(py_path[subfolder_num][-3:])
+        print(click_wait_time)
 
         if py_path[subfolder_num][-3:] == ".py":
 
@@ -68,16 +66,23 @@ def run_script():
                 dpg.show_item(active_loading_indicator)
                 global status
                 status = "Active"
-                os.system(f"py {full_path}")
+                os.system(f"start py {full_path}")
             except:
                 try:
-                    os.system(f"python3 {full_path}")
+                    os.system(f"start python3 {full_path}")
                 except:
+                    print("No file found")
                     reset()
         else:
+            print("non .py")
             reset()
     except:
+        print("Exception")
         reset()
+
+
+
+        
 
 """
 for path in Path('C:/').rglob(""):  # Use '/' on Linux/macOS or 'C:/' on Windows
@@ -88,23 +93,24 @@ os.system(f"py C:/Users/ztdnz/Documents/Capstone-Project-2024/xzplore/xzplore.py
 """
 
 def kill():
-    reset()
-    print("test button")
-    file_name = dpg.get_value(insert_file_text)
+    #reset()
+    print("kill button")
+    #file_name = dpg.get_value(insert_file_text)
     '''
     for path in Path("C:/").rglob(file_name):
         full_path = path '''
 
     #os.system(f"taskkill /PID {full_path} /F ")
 
+   
 
 def reset():
+    print("Program reset")
     global status
     status = "Inactive"
     dpg.set_value(debug_console,value="Unable to find .py file...")
-    dpg.set_value(insert_file_text,value="")
+    #dpg.set_value(insert_file_text,value="")
     dpg.set_value(display_py_file,value="")
-    dpg.set_value(insert_file_text,value="")
     dpg.set_value(display_path,value="")
     dpg.show_item(inactive_status)
     dpg.hide_item(active_status)
@@ -133,6 +139,44 @@ def tab_window_display(sender,app_data,user_data):
         dpg.hide_item(window)
 
     dpg.show_item(user_data)
+
+def add_pid_console():
+    global loop_time
+
+    if loop_time > 100:
+
+        pid_list = get_pids()
+
+        for i in range(len(pid_list)-1):
+
+            with dpg.group(horizontal=True,parent="window_manager_window"):
+                dpg.add_text(f"{pid_list[i]}",parent="window_manager_window")
+                dpg.add_button(label="Terminate file",callback=lambda:print("program closed"),parent="window_manager_window")
+        #print(os.getpid())
+        #os.system(f"taskkill /PID Python.exe")
+        loop_time = 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
         
@@ -193,7 +237,6 @@ with dpg.window(label="main_window",tag="main_window"):
         dpg.add_text("Current Console")
         pass
 
-    
     with dpg.child_window(height=85,show=False,tag="metadata_window") as meta_data_window:
         dpg.add_text("metadata")
         
@@ -204,11 +247,6 @@ loop_time = 0
 click_start_time = time.time()
 click_wait_time = 0 
 file_inserted = False
-
-
-
-
-
 
 
 while dpg.is_dearpygui_running():
@@ -222,49 +260,55 @@ while dpg.is_dearpygui_running():
 
     if status == "Active":
         dpg.set_value(file_runtime,f"{runtime} seconds")
+        print(click_wait_time)
+
         if click_wait_time > 3:
             #print("Refresh",click_wait_time)
+            try:
+                os.system(f"taskkill /PID {insert_file_pid_number} /F")
+                print("taskkileld")
+                
+                
+
+            except:
+                pass
+            
+            
+            for pid_info in get_pids():
+                split_pid = pid_info.split()
+                if len(split_pid) > 0 :
+                    current_running_pid_numbers_list.append(split_pid[1])
+            
+            for pid in running_pid_numbers_list:
+                if pid in current_running_pid_numbers_list:
+                    current_running_pid_numbers_list.remove(pid)
+                    
+
             click_start_time = time.time()
 
+            print()
+            print(running_pid_numbers_list)
+            print(current_running_pid_numbers_list)
+
+            try:
+                insert_file_pid_number = current_running_pid_numbers_list[0]
+                print(insert_file_pid_number)
+            except:
+                pass
+        
+            print(dpg.get_value(insert_file_text))
 
 
         loop_time +=1
 
         #print(runtime)
-        if loop_time > 100:
-
-
-
-            for pid_info in get_pids():
-                split_pid = pid_info.split()
-                if len(split_pid) > 0 :
-                    current_pid_number_list.append(split_pid[1])
-        
-            
-            print(pid_number_list)
-            print()
-            print(current_pid_number_list)
-
-            pid_list = get_pids()
-
-            for i in range(len(pid_list)-1):
-
-                with dpg.group(horizontal=True,parent="window_manager_window"):
-                    dpg.add_text(f"{pid_list[i]}",parent="window_manager_window")
-                    dpg.add_button(label="Terminate file",callback=lambda:print("program closed"),parent="window_manager_window")
-    
-            #print(os.getpid())
-            #os.system(f"taskkill /PID Python.exe")
-
-
-            
-            loop_time = 0
-        current_pid_number_list.clear()
+        add_pid_console()
+        current_running_pid_numbers_list.clear()
 
     
    # os.system("tasklist | findstr python")
  
-    
-    dpg.render_dearpygui_frame()
 
+
+    dpg.render_dearpygui_frame()
 dpg.destroy_context()
